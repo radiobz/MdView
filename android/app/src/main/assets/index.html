@@ -66,6 +66,9 @@
   .dd-x { color: #c0c4cc; padding: 4px 6px; font-size: 14px; }
   .dd-x:hover { color: #ef4444; }
   .dd-empty { padding: 24px; text-align: center; color: #9ca3af; font-size: 13px; }
+  /* ===== 本地文件（App 内）===== */
+  #local-btn { display: none; }
+  body.is-app #local-btn { display: inline-flex; }
   /* ===== 主区 ===== */
   main { flex: 1; display: flex; overflow: hidden; }
   .pane { display: flex; flex-direction: column; overflow: hidden; }
@@ -136,6 +139,7 @@
       <div class="dd-list" id="dd-list"></div>
     </div>
   </div>
+  <button class="btn" id="local-btn">本地文件</button>
   <label class="btn" for="file-input">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
     打开 .md
@@ -290,6 +294,35 @@ tabView.addEventListener('click', () => {
   main.className = 'mobile-preview';
   tabView.classList.add('active'); tabEdit.classList.remove('active');
 });
+
+// ===== 本地文件列表（仅 APK 内可用）=====
+if (window.AndroidBridge) {
+  document.body.classList.add('is-app');
+  document.getElementById('local-btn').addEventListener('click', () => {
+    if (!AndroidBridge.hasPermission()) {
+      alert('请先授予"管理所有文件"权限，然后再次点击"本地文件"。');
+      AndroidBridge.requestPermission();
+      return;
+    }
+    let files;
+    try { files = JSON.parse(AndroidBridge.listMdFiles() || '[]'); }
+    catch { files = []; }
+    if (!files.length) {
+      alert('未在"下载"或"文档"目录找到 .md 文件');
+      return;
+    }
+    const names = files.map((f, i) => `${i + 1}. ${f.name}  (${fmtSize(f.size)})`).join('\n');
+    const pick = prompt('发现 ' + files.length + ' 个 .md 文件，输入编号打开：\n\n' + names);
+    const idx = parseInt(pick, 10) - 1;
+    if (!isNaN(idx) && files[idx]) {
+      const content = AndroidBridge.readFile(files[idx].path);
+      editor.value = content;
+      fileLabel.textContent = files[idx].name;
+      render();
+      addRecent(files[idx].name, content);
+    }
+  });
+}
 
 render();
 </script>
