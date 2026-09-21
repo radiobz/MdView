@@ -5,6 +5,11 @@ import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.CancellationSignal;
+import android.print.PrintAttributes;
+import android.print.PrintDocumentAdapter;
+import android.print.PrintManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -44,6 +49,22 @@ public class MainActivity extends Activity {
                 return true;
             }
         });
+
+        // JS 桥接：打印
+        webView.addJavascriptInterface(new Object() {
+            @JavascriptInterface
+            public void print() {
+                runOnUiThread(() -> {
+                    PrintManager pm = (PrintManager) getSystemService(PRINT_SERVICE);
+                    PrintDocumentAdapter adapter = webView.createPrintDocumentAdapter("MdView");
+                    PrintAttributes attrs = new PrintAttributes.Builder()
+                            .setMediaSize(PrintAttributes.MediaSize.ISO_A4)
+                            .setResolution(new PrintAttributes.Resolution("pdf", "pdf", 300, 300))
+                            .build();
+                    pm.print("MdView", adapter, attrs);
+                });
+            }
+        }, "AndroidBridge");
 
         webView.loadUrl("file:///android_asset/index.html");
     }

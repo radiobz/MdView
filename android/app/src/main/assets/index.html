@@ -275,7 +275,11 @@ document.getElementById('clear-btn').addEventListener('click', () => {
 
 document.getElementById('print-btn').addEventListener('click', () => {
   if (!editor.value.trim()) { alert('请先打开或粘贴 Markdown 内容'); return; }
-  window.print();
+  if (window.AndroidBridge) {
+    AndroidBridge.print();
+  } else {
+    window.print();
+  }
 });
 
 // 移动端 tab 切换
