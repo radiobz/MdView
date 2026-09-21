@@ -41,6 +41,31 @@
   .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
   .btn-primary:hover { background: var(--accent-hover); color: #fff; }
   input[type=file] { display: none; }
+  /* ===== 最近文档下拉 ===== */
+  .recent-wrap { position: relative; }
+  .dropdown {
+    position: absolute; top: 44px; left: 0; width: 320px; max-width: 85vw;
+    background: #fff; border: 1px solid var(--border); border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.12); z-index: 100; overflow: hidden;
+    display: none;
+  }
+  .dropdown.open { display: block; }
+  .dd-header { padding: 10px 14px; font-size: 12px; color: var(--muted);
+    background: #f7f8fa; border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center; }
+  .dd-clear { color: var(--accent); cursor: pointer; font-size: 12px; background: none; border: none; }
+  .dd-list { max-height: 320px; overflow-y: auto; }
+  .dd-item { padding: 10px 14px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+  .dd-item:hover { background: #f5f8ff; }
+  .dd-icon { width: 30px; height: 30px; background: #eff6ff; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center; font-size: 10px;
+    color: var(--accent); flex-shrink: 0; font-family: monospace; }
+  .dd-meta { flex: 1; min-width: 0; }
+  .dd-name { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dd-sub { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+  .dd-x { color: #c0c4cc; padding: 4px 6px; font-size: 14px; }
+  .dd-x:hover { color: #ef4444; }
+  .dd-empty { padding: 24px; text-align: center; color: #9ca3af; font-size: 13px; }
   /* ===== 主区 ===== */
   main { flex: 1; display: flex; overflow: hidden; }
   .pane { display: flex; flex-direction: column; overflow: hidden; }
@@ -104,6 +129,13 @@
 <header>
   <div class="logo"><div class="logo-mark">M</div>MdView</div>
   <span class="file-label" id="file-label">未选择文件</span>
+  <div class="recent-wrap">
+    <button class="btn" id="recent-btn">最近文档 ▾</button>
+    <div class="dropdown" id="recent-dropdown">
+      <div class="dd-header"><span>最近打开（最多 10 个）</span><button class="dd-clear" id="dd-clear">清除</button></div>
+      <div class="dd-list" id="dd-list"></div>
+    </div>
+  </div>
   <label class="btn" for="file-input">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
     打开 .md
@@ -156,12 +188,84 @@ function render() {
 
 editor.addEventListener('input', render);
 
+// ===== 最近文档（localStorage，最多 10 个）=====
+const RECENT_KEY = 'mdview_recent';
+const MAX_RECENT = 10;
+const recentBtn = document.getElementById('recent-btn');
+const dropdown = document.getElementById('recent-dropdown');
+const ddList = document.getElementById('dd-list');
+
+function loadRecent() {
+  try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); }
+  catch { return []; }
+}
+function saveRecent(list) {
+  localStorage.setItem(RECENT_KEY, JSON.stringify(list.slice(0, MAX_RECENT)));
+}
+function addRecent(name, content) {
+  let list = loadRecent().filter(it => it.name !== name);
+  list.unshift({ name, content, time: Date.now() });
+  saveRecent(list);
+}
+function fmtTime(ts) {
+  const diff = Date.now() - ts;
+  if (diff < 60e3) return '现在';
+  if (diff < 3600e3) return Math.floor(diff / 60e3) + ' 分钟前';
+  if (diff < 86400e3) return Math.floor(diff / 3600e3) + ' 小时前';
+  if (diff < 7*86400e3) return Math.floor(diff / 86400e3) + ' 天前';
+  return new Date(ts).toLocaleDateString();
+}
+function fmtSize(n) {
+  return n > 1024*1024 ? (n/1024/1024).toFixed(1)+' MB' : Math.max(1, Math.round(n/1024))+' KB';
+}
+function renderRecent() {
+  const list = loadRecent();
+  ddList.innerHTML = list.length ? '' : '<div class="dd-empty">暂无最近文档</div>';
+  list.forEach((it, idx) => {
+    const row = document.createElement('div');
+    row.className = 'dd-item';
+    row.innerHTML = `<div class="dd-icon">MD</div>
+      <div class="dd-meta"><div class="dd-name"></div><div class="dd-sub"></div></div>
+      <div class="dd-x" title="移除">×</div>`;
+    row.querySelector('.dd-name').textContent = it.name;
+    row.querySelector('.dd-sub').textContent = fmtTime(it.time) + ' · ' + fmtSize(new Blob([it.content]).size);
+    row.addEventListener('click', () => {
+      editor.value = it.content;
+      fileLabel.textContent = it.name;
+      render();
+      dropdown.classList.remove('open');
+    });
+    row.querySelector('.dd-x').addEventListener('click', (e) => {
+      e.stopPropagation();
+      saveRecent(loadRecent().filter((_, i) => i !== idx));
+      renderRecent();
+    });
+    ddList.appendChild(row);
+  });
+}
+recentBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  renderRecent();
+  dropdown.classList.toggle('open');
+});
+document.addEventListener('click', (e) => {
+  if (!dropdown.contains(e.target)) dropdown.classList.remove('open');
+});
+document.getElementById('dd-clear').addEventListener('click', () => {
+  localStorage.removeItem(RECENT_KEY);
+  renderRecent();
+});
+
 document.getElementById('file-input').addEventListener('change', function(e) {
   const file = e.target.files[0];
   if (!file) return;
   fileLabel.textContent = file.name;
   const reader = new FileReader();
-  reader.onload = ev => { editor.value = ev.target.result; render(); };
+  reader.onload = ev => {
+    editor.value = ev.target.result;
+    render();
+    addRecent(file.name, ev.target.result);
+  };
   reader.readAsText(file, 'utf-8');
 });
 
