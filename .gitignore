@@ -9,3 +9,4 @@ android/*.iml
 # 系统
 .DS_Store
 _shot*/
+_shots/

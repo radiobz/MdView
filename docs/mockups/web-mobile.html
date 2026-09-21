@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "PingFang SC", "Noto Sans CJK SC", sans-serif; background: #e9ebef; padding: 30px; display: flex; gap: 30px; justify-content: center; }
+  .phone { width: 390px; height: 780px; background: #fff; border-radius: 28px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,.2); border: 8px solid #1f2329; }
+  .statusbar { padding: 10px 18px 4px; font-size: 12px; color: #6b7280; display: flex; justify-content: space-between; }
+  .topbar { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-bottom: 1px solid #e2e5ea; }
+  .logo { width: 24px; height: 24px; border-radius: 6px; background: #2563eb; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+  .appname { font-weight: 700; font-size: 14px; }
+  .sp { flex: 1; }
+  .iconbtn { padding: 6px 10px; border: 1px solid #e2e5ea; border-radius: 6px; font-size: 12px; }
+  .tabs { display: flex; border-bottom: 1px solid #e2e5ea; }
+  .tabs div { flex: 1; text-align: center; padding: 10px; font-size: 13px; color: #6b7280; }
+  .tabs .on { color: #2563eb; font-weight: 600; border-bottom: 2px solid #2563eb; }
+  .content { padding: 20px; }
+  h1 { font-size: 20px; border-bottom: 2px solid #e2e5ea; padding-bottom: 8px; margin-bottom: 12px; }
+  p { line-height: 1.8; font-size: 14px; margin: 8px 0; }
+  .formula { background: #f7f8fa; padding: 12px; text-align: center; border-radius: 6px; font-family: "Times New Roman", serif; font-size: 15px; margin: 12px 0; }
+</style></head>
+<body>
+<div class="phone">
+  <div class="statusbar"><span>9:41</span><span>● ● ● 100%</span></div>
+  <div class="topbar">
+    <div class="logo">M</div><div class="appname">MdView</div><div class="sp"></div>
+    <div class="iconbtn">打开</div><div class="iconbtn" style="background:#2563eb;color:#fff;border-color:#2563eb">PDF</div>
+  </div>
+  <div class="tabs"><div>编辑</div><div class="on">预览</div></div>
+  <div class="content">
+    <h1>CE-OFDM 相位卷绕</h1>
+    <p>传统 OFDM 的 PAPR 可达 10~12 dB。CE-OFDM 将信号调制到相位上：</p>
+    <div class="formula">x(t) = A e<sup>j(2πf<sub>c</sub>t + 2πh·s(t))</sup></div>
+    <p>· 恒包络，PAPR = 0 dB<br>· 接收端相位解卷绕</p>
+  </div>
+</div>
+<div class="phone">
+  <div class="statusbar"><span>9:41</span><span>● ● ● 100%</span></div>
+  <div class="topbar">
+    <div class="logo">M</div><div class="appname">MdView</div><div class="sp"></div>
+    <div class="iconbtn">打开</div><div class="iconbtn" style="background:#2563eb;color:#fff;border-color:#2563eb">PDF</div>
+  </div>
+  <div class="tabs"><div class="on">编辑</div><div>预览</div></div>
+  <div class="content" style="font-family:Menlo,Consolas,monospace;font-size:12px;line-height:1.8;color:#333;white-space:pre-wrap"># CE-OFDM 相位卷绕
+
+传统 OFDM 的 PAPR 可达 $10\sim12$ dB。
+CE-OFDM 将信号调制到相位上：
+
+$$x(t) = A e^{j(2\pi f_c t + 2\pi h s(t))}$$
+
+- 恒包络，PAPR = 0
+- 接收端相位解卷绕</div>
+</div>
+</body></html>

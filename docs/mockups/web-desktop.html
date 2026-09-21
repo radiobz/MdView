@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "PingFang SC", "Noto Sans CJK SC", sans-serif; background: #e9ebef; padding: 30px; color: #1f2329; }
+  .frame { width: 1280px; height: 800px; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,.15); margin: 0 auto; }
+  .topbar { display: flex; align-items: center; gap: 12px; padding: 12px 20px; background: #fff; border-bottom: 1px solid #e2e5ea; }
+  .logo { width: 28px; height: 28px; border-radius: 6px; background: #2563eb; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+  .appname { font-weight: 700; font-size: 15px; }
+  .fname { color: #6b7280; font-size: 13px; flex: 1; }
+  .btn { padding: 7px 14px; border: 1px solid #e2e5ea; border-radius: 7px; font-size: 13px; background: #fff; }
+  .btn-primary { background: #2563eb; color: #fff; border-color: #2563eb; }
+  .body { display: flex; height: 730px; }
+  .left { width: 50%; border-right: 1px solid #e2e5ea; display: flex; flex-direction: column; }
+  .ptitle { padding: 8px 16px; font-size: 11px; color: #6b7280; background: #f7f8fa; border-bottom: 1px solid #e2e5ea; }
+  .editor { flex: 1; padding: 16px; font-family: Menlo, Consolas, monospace; font-size: 13px; line-height: 1.7; white-space: pre-wrap; color: #333; }
+  .right { flex: 1; padding: 32px 40px; overflow: hidden; }
+  h1 { font-size: 22px; border-bottom: 2px solid #e2e5ea; padding-bottom: 8px; margin-bottom: 14px; }
+  p { line-height: 1.8; font-size: 14px; margin: 8px 0; }
+  .formula { background: #f7f8fa; padding: 12px; text-align: center; border-radius: 6px; font-family: "Times New Roman", serif; font-size: 16px; margin: 12px 0; }
+  .tag { display: inline-block; background: #eff6ff; color: #2563eb; padding: 2px 8px; border-radius: 4px; font-size: 11px; }
+</style></head>
+<body>
+<div class="frame">
+  <div class="topbar">
+    <div class="logo">M</div><div class="appname">MdView</div>
+    <div class="fname">CE-OFDM相位卷绕.md</div>
+    <div class="btn">打开 .md</div>
+    <div class="btn">清空</div>
+    <div class="btn btn-primary">导出 PDF</div>
+  </div>
+  <div class="body">
+    <div class="left">
+      <div class="ptitle">Markdown 源码</div>
+      <div class="editor"># CE-OFDM 相位卷绕
+
+传统 OFDM 的 PAPR 可达 $10\sim 12$ dB。
+CE-OFDM 将信号调制到相位上：
+
+$$
+x(t) = A e^{j(2\pi f_c t + 2\pi h s(t))}
+$$
+
+- 恒包络，PAPR = 0
+- 接收端相位解卷绕</div>
+    </div>
+    <div class="right">
+      <h1>CE-OFDM 相位卷绕</h1>
+      <p>传统 OFDM 的 PAPR 可达 <span class="tag">10 ~ 12 dB</span>。CE-OFDM 将信号调制到相位上：</p>
+      <div class="formula">x(t) = A e<sup>j(2πf<sub>c</sub>t + 2πh·s(t))</sup></div>
+      <p style="margin-top:16px">· 恒包络，PAPR = 0 dB<br>· 接收端相位解卷绕</p>
+      <p style="margin-top:24px;color:#6b7280;font-size:13px">[ 预览区：公式、表格、代码块均实时渲染 ]</p>
+    </div>
+  </div>
+</div>
+</body></html>
