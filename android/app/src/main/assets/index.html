@@ -147,7 +147,8 @@
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
     打开文件
   </label>
-  <input type="file" id="file-input" accept=".md,.markdown,.m,.c,.h,.cpp,.hpp,.cc,.py,.java,.js,.ts,.json,.xml,.html,.css,.sql,.sh,.txt,.log,.ini,.cfg,.conf,.yaml,.yml,.csv,.vsdx">
+  <input type="file" id="file-input" accept=".md,.markdown,.m,.c,.h,.cpp,.hpp,.cc,.py,.java,.js,.ts,.json,.xml,.html,.css,.sql,.sh,.txt,.log,.ini,.cfg,.conf,.yaml,.yml,.csv,.vsdx,.pdf,.png,.jpg,.jpeg,.bmp,.gif">
+  <button class="btn" id="download-btn" style="display:none">下载 .md</button>
   <button class="btn" id="clear-btn">清空</button>
   <button class="btn btn-primary" id="print-btn">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
@@ -174,6 +175,8 @@
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/highlight.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.0.4/dist/tesseract.min.js"></script>
 <script>
 const editor = document.getElementById('editor');
 const preview = document.getElementById('preview');
@@ -294,6 +297,7 @@ function renderRecent() {
       if (MD_EXT.includes(ext)) setMode('markdown');
       else setMode('code', CODE_LANG_MAP[ext] || 'plaintext');
       render();
+      downloadBtn.style.display = 'inline-flex';
       dropdown.classList.remove('open');
     });
     row.querySelector('.dd-x').addEventListener('click', (e) => {
@@ -351,6 +355,38 @@ document.getElementById('file-input').addEventListener('change', async function(
     return;
   }
 
+  // PDF 文件：提取文字
+  if (ext === 'pdf') {
+    try {
+      const content = await extractPDF(file);
+      editor.value = content;
+      setMode('markdown');
+      render();
+      addRecent(file.name.replace('.pdf', '.md'), content);
+      downloadBtn.style.display = 'inline-flex';
+    } catch (err) {
+      alert('PDF 解析失败：' + err.message);
+    }
+    e.target.value = '';
+    return;
+  }
+
+  // 图片文件：OCR
+  if (['png', 'jpg', 'jpeg', 'bmp', 'gif'].includes(ext)) {
+    try {
+      const content = await extractImage(file);
+      editor.value = content;
+      setMode('markdown');
+      render();
+      addRecent(file.name.replace(/\.\w+$/, '.md'), content);
+      downloadBtn.style.display = 'inline-flex';
+    } catch (err) {
+      alert('OCR 失败：' + err.message);
+    }
+    e.target.value = '';
+    return;
+  }
+
   const reader = new FileReader();
   reader.onload = ev => {
     editor.value = ev.target.result;
@@ -361,6 +397,7 @@ document.getElementById('file-input').addEventListener('change', async function(
     }
     render();
     addRecent(file.name, ev.target.result);
+    downloadBtn.style.display = 'inline-flex';
   };
   reader.readAsText(file, 'utf-8');
   e.target.value = '';
@@ -368,6 +405,7 @@ document.getElementById('file-input').addEventListener('change', async function(
 
 document.getElementById('clear-btn').addEventListener('click', () => {
   editor.value = ''; fileLabel.textContent = '未选择文件'; setMode('markdown'); render();
+  downloadBtn.style.display = 'none';
 });
 
 document.getElementById('print-btn').addEventListener('click', () => {
@@ -378,6 +416,74 @@ document.getElementById('print-btn').addEventListener('click', () => {
     window.print();
   }
 });
+
+// ===== 下载 .md =====
+const downloadBtn = document.getElementById('download-btn');
+downloadBtn.addEventListener('click', () => {
+  const name = (fileLabel.textContent.replace(/\.(md|markdown)$/i, '') || 'document') + '.md';
+  const blob = new Blob([editor.value], {type: 'text/markdown;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+// ===== PDF.js 配置 =====
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+
+function showLoading(msg) {
+  preview.innerHTML = '<p class="empty-hint" style="margin-top:30vh">' + msg + '</p>';
+}
+
+async function extractPDF(file) {
+  showLoading('正在解析 PDF，提取文字…');
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({data: buf}).promise;
+  let out = '# ' + file.name + '\n\n';
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const tc = await page.getTextContent();
+    // 按 y 坐标分行
+    const lines = {};
+    let maxSize = 0;
+    tc.items.forEach(it => {
+      const y = Math.round(it.transform[5]);
+      const size = it.height || 12;
+      if (size > maxSize) maxSize = size;
+      if (!lines[y]) lines[y] = [];
+      lines[y].push({x: it.transform[4], text: it.str, size});
+    });
+    const ys = Object.keys(lines).sort((a, b) => b - a);
+    ys.forEach(y => {
+      const items = lines[y].sort((a, b) => a.x - b.x);
+      const lineText = items.map(it => it.text).join('').trim();
+      if (!lineText) return;
+      const avgSize = items.reduce((s, it) => s + it.size, 0) / items.length;
+      if (avgSize > maxSize * 0.9 && lineText.length < 80) {
+        out += '## ' + lineText + '\n\n';
+      } else {
+        out += lineText + '\n\n';
+      }
+    });
+    if (i < pdf.numPages) out += '\n---\n\n';
+  }
+  return out;
+}
+
+async function extractImage(file) {
+  showLoading('正在 OCR 识别图片文字（首次需加载语言包，约 5MB）…');
+  const worker = await Tesseract.createWorker(['chi_sim', 'eng'], 1, {
+    logger: m => {
+      if (m.status === 'recognizing text') {
+        showLoading('OCR 识别中…' + Math.round(m.progress * 100) + '%');
+      }
+    }
+  });
+  const {data} = await worker.recognize(file);
+  await worker.terminate();
+  return '# ' + file.name + '\n\n' + (data.text || '').trim();
+}
 
 // 移动端 tab 切换
 const main = document.getElementById('main');
