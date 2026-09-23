@@ -6,6 +6,7 @@
 <title>MdView — Markdown 转 PDF</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%232563eb'/%3E%3Ctext x='12' y='16' font-size='11' fill='white' text-anchor='middle' font-family='monospace' font-weight='bold'%3EM%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css">
 <style>
   :root {
     --bg: #f7f8fa;
@@ -99,6 +100,12 @@
   #preview img { max-width: 100%; }
   #preview hr { border: none; border-top: 1px solid var(--border); margin: 1.2em 0; }
   .empty-hint { color: var(--muted); text-align: center; margin-top: 20vh; font-size: 14px; }
+  /* 代码视图模式 */
+  body.code-mode #editor-pane { display: none !important; }
+  body.code-mode #preview-pane { display: flex !important; width: 100% !important; }
+  body.code-mode #preview { padding: 24px 32px; }
+  #preview code.hljs { background: #f6f8fa; padding: 16px; border-radius: 8px; font-size: 13.5px; line-height: 1.6; }
+  .code-badge { display: inline-block; background: #eff6ff; color: var(--accent); font-size: 11px; padding: 2px 8px; border-radius: 4px; margin-bottom: 12px; font-family: monospace; }
   /* 移动端 */
   .tabbar { display: none; }
   @media (max-width: 768px) {
@@ -138,9 +145,9 @@
   </div>
   <label class="btn" for="file-input">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-    打开 .md
+    打开文件
   </label>
-  <input type="file" id="file-input" accept=".md,.markdown,.txt,.markdown">
+  <input type="file" id="file-input" accept=".md,.markdown,.m,.c,.h,.cpp,.hpp,.cc,.py,.java,.js,.ts,.json,.xml,.html,.css,.sql,.sh,.txt,.log,.ini,.cfg,.conf,.yaml,.yml,.csv,.vsdx">
   <button class="btn" id="clear-btn">清空</button>
   <button class="btn btn-primary" id="print-btn">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
@@ -165,15 +172,39 @@
 <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/highlight.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script>
 const editor = document.getElementById('editor');
 const preview = document.getElementById('preview');
 const fileLabel = document.getElementById('file-label');
 
+// 文件类型映射
+const CODE_LANG_MAP = {
+  'm': 'matlab', 'c': 'c', 'h': 'c', 'cpp': 'cpp', 'hpp': 'cpp', 'cc': 'cpp',
+  'py': 'python', 'java': 'java', 'js': 'javascript', 'mjs': 'javascript',
+  'cjs': 'javascript', 'ts': 'typescript', 'json': 'json', 'xml': 'xml',
+  'html': 'xml', 'css': 'css', 'sql': 'sql', 'sh': 'bash', 'bash': 'bash',
+  'txt': 'plaintext', 'log': 'plaintext', 'csv': 'plaintext',
+  'ini': 'ini', 'cfg': 'ini', 'conf': 'ini', 'yaml': 'yaml', 'yml': 'yaml'
+};
+const MD_EXT = ['md', 'markdown'];
+let currentMode = 'markdown'; // markdown | code
+let currentLang = '';
+
+function getExt(name) {
+  const parts = name.toLowerCase().split('.');
+  return parts.length > 1 ? parts.pop() : '';
+}
+
 function render() {
   const text = editor.value;
+  if (currentMode === 'code') {
+    renderCode(text);
+    return;
+  }
   if (!text.trim()) {
-    preview.innerHTML = '<p class="empty-hint">在左侧编辑或打开 .md 文件后，这里将实时渲染（支持 LaTeX 数学公式）</p>';
+    preview.innerHTML = '<p class="empty-hint">在左侧编辑或打开文件后，这里将实时渲染（支持 Markdown + LaTeX 公式）</p>';
     return;
   }
   preview.innerHTML = marked.parse(text);
@@ -184,6 +215,33 @@ function render() {
     ],
     throwOnError: false
   });
+}
+
+function renderCode(text) {
+  const lang = currentLang || 'plaintext';
+  const badge = `<span class="code-badge">${lang.toUpperCase()}</span>`;
+  let highlighted;
+  try {
+    if (lang === 'plaintext') {
+      highlighted = escapeHtml(text);
+    } else {
+      highlighted = hljs.highlight(text, {language: lang}).value;
+    }
+  } catch {
+    highlighted = escapeHtml(text);
+  }
+  preview.innerHTML = badge + '<pre><code class="hljs">' + highlighted + '</code></pre>';
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function setMode(mode, lang) {
+  currentMode = mode;
+  currentLang = lang || '';
+  document.body.classList.toggle('code-mode', mode === 'code');
+  document.querySelector('.pane-title').textContent = mode === 'code' ? '代码预览（只读）' : 'Markdown 源码';
 }
 
 editor.addEventListener('input', render);
@@ -232,6 +290,9 @@ function renderRecent() {
     row.addEventListener('click', () => {
       editor.value = it.content;
       fileLabel.textContent = it.name;
+      const ext = getExt(it.name);
+      if (MD_EXT.includes(ext)) setMode('markdown');
+      else setMode('code', CODE_LANG_MAP[ext] || 'plaintext');
       render();
       dropdown.classList.remove('open');
     });
@@ -256,21 +317,57 @@ document.getElementById('dd-clear').addEventListener('click', () => {
   renderRecent();
 });
 
-document.getElementById('file-input').addEventListener('change', function(e) {
+document.getElementById('file-input').addEventListener('change', async function(e) {
   const file = e.target.files[0];
   if (!file) return;
   fileLabel.textContent = file.name;
+  const ext = getExt(file.name);
+
+  // vsdx 文件：用 JSZip 解压提取文本
+  if (ext === 'vsdx') {
+    try {
+      const zip = await JSZip.loadAsync(await file.arrayBuffer());
+      let texts = [];
+      const pageFiles = Object.keys(zip.files).filter(p =>
+        p.startsWith('visio/pages/page') && p.endsWith('.xml'));
+      for (const pf of pageFiles.sort()) {
+        const xml = await zip.files[pf].async('string');
+        const matches = xml.match(/<Text[^>]*>([^<]+)<\/Text>/g) || [];
+        matches.forEach(m => {
+          const t = m.replace(/<[^>]+>/g, '').trim();
+          if (t) texts.push(t);
+        });
+      }
+      const content = '# ' + file.name + '\n\n> Visio 文件文本提取（图形内容不显示）\n\n' +
+        texts.map(t => '- ' + t).join('\n');
+      editor.value = content;
+      setMode('markdown');
+      render();
+      addRecent(file.name, content);
+    } catch (err) {
+      alert('无法解析 Visio 文件：' + err.message);
+    }
+    e.target.value = '';
+    return;
+  }
+
   const reader = new FileReader();
   reader.onload = ev => {
     editor.value = ev.target.result;
+    if (MD_EXT.includes(ext)) {
+      setMode('markdown');
+    } else {
+      setMode('code', CODE_LANG_MAP[ext] || 'plaintext');
+    }
     render();
     addRecent(file.name, ev.target.result);
   };
   reader.readAsText(file, 'utf-8');
+  e.target.value = '';
 });
 
 document.getElementById('clear-btn').addEventListener('click', () => {
-  editor.value = ''; fileLabel.textContent = '未选择文件'; render();
+  editor.value = ''; fileLabel.textContent = '未选择文件'; setMode('markdown'); render();
 });
 
 document.getElementById('print-btn').addEventListener('click', () => {
