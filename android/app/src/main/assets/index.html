@@ -149,6 +149,7 @@
   </label>
   <input type="file" id="file-input" accept=".md,.markdown,.m,.c,.h,.cpp,.hpp,.cc,.py,.java,.js,.ts,.json,.xml,.html,.css,.sql,.sh,.txt,.log,.ini,.cfg,.conf,.yaml,.yml,.csv,.vsdx,.pdf,.png,.jpg,.jpeg,.bmp,.gif">
   <button class="btn" id="download-btn" style="display:none">下载 .md</button>
+  <button class="btn" id="export-html-btn" style="display:none">导出 HTML</button>
   <button class="btn" id="clear-btn">清空</button>
   <button class="btn btn-primary" id="print-btn">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
@@ -297,7 +298,7 @@ function renderRecent() {
       if (MD_EXT.includes(ext)) setMode('markdown');
       else setMode('code', CODE_LANG_MAP[ext] || 'plaintext');
       render();
-      downloadBtn.style.display = 'inline-flex';
+      downloadBtn.style.display = 'inline-flex'; exportHtmlBtn.style.display = 'inline-flex';
       dropdown.classList.remove('open');
     });
     row.querySelector('.dd-x').addEventListener('click', (e) => {
@@ -363,7 +364,7 @@ document.getElementById('file-input').addEventListener('change', async function(
       setMode('markdown');
       render();
       addRecent(file.name.replace('.pdf', '.md'), content);
-      downloadBtn.style.display = 'inline-flex';
+      downloadBtn.style.display = 'inline-flex'; exportHtmlBtn.style.display = 'inline-flex';
     } catch (err) {
       alert('PDF 解析失败：' + err.message);
     }
@@ -379,7 +380,7 @@ document.getElementById('file-input').addEventListener('change', async function(
       setMode('markdown');
       render();
       addRecent(file.name.replace(/\.\w+$/, '.md'), content);
-      downloadBtn.style.display = 'inline-flex';
+      downloadBtn.style.display = 'inline-flex'; exportHtmlBtn.style.display = 'inline-flex';
     } catch (err) {
       alert('OCR 失败：' + err.message);
     }
@@ -397,7 +398,7 @@ document.getElementById('file-input').addEventListener('change', async function(
     }
     render();
     addRecent(file.name, ev.target.result);
-    downloadBtn.style.display = 'inline-flex';
+    downloadBtn.style.display = 'inline-flex'; exportHtmlBtn.style.display = 'inline-flex';
   };
   reader.readAsText(file, 'utf-8');
   e.target.value = '';
@@ -405,7 +406,7 @@ document.getElementById('file-input').addEventListener('change', async function(
 
 document.getElementById('clear-btn').addEventListener('click', () => {
   editor.value = ''; fileLabel.textContent = '未选择文件'; setMode('markdown'); render();
-  downloadBtn.style.display = 'none';
+  downloadBtn.style.display = 'none'; exportHtmlBtn.style.display = 'none';
 });
 
 document.getElementById('print-btn').addEventListener('click', () => {
@@ -425,6 +426,53 @@ downloadBtn.addEventListener('click', () => {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = name;
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+// ===== 导出单文件 HTML =====
+const exportHtmlBtn = document.getElementById('export-html-btn');
+exportHtmlBtn.addEventListener('click', async () => {
+  // 获取 KaTeX CSS 内联
+  let katexCSS = '';
+  try {
+    const res = await fetch('https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css');
+    katexCSS = await res.text();
+  } catch {}
+  const title = fileLabel.textContent.replace(/\.\w+$/, '') || 'document';
+  const body = preview.innerHTML;
+  const html = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${title}</title>
+<style>
+  body { font-family: -apple-system, "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+         max-width: 800px; margin: 40px auto; padding: 0 20px; line-height: 1.75; color: #1f2329; }
+  h1, h2, h3 { line-height: 1.3; }
+  h1 { font-size: 1.8em; border-bottom: 2px solid #e2e5ea; padding-bottom: .3em; }
+  h2 { font-size: 1.45em; border-bottom: 1px solid #e2e5ea; padding-bottom: .25em; }
+  h3 { font-size: 1.2em; }
+  code { background: #f1f3f5; padding: 2px 6px; border-radius: 4px; font-family: Menlo, Consolas, monospace; font-size: .9em; }
+  pre { background: #f6f8fa; padding: 14px 16px; border-radius: 8px; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border: 1px solid #e2e5ea; padding: 7px 12px; }
+  th { background: #f6f8fa; }
+  img { max-width: 100%; }
+  blockquote { border-left: 4px solid #e2e5ea; padding: 4px 16px; color: #6b7280; }
+  ${katexCSS}
+</style>
+</head>
+<body>
+${body}
+</body>
+</html>`;
+  const blob = new Blob([html], {type: 'text/html;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = title + '.html';
   a.click();
   URL.revokeObjectURL(a.href);
 });
