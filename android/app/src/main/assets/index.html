@@ -51,6 +51,7 @@
     display: none;
   }
   .dropdown.open { display: block; }
+  .dropdown.right { left: auto; right: 0; }
   .dd-header { padding: 10px 14px; font-size: 12px; color: var(--muted);
     background: #f7f8fa; border-bottom: 1px solid var(--border);
     display: flex; justify-content: space-between; align-items: center; }
@@ -151,7 +152,7 @@
   <button class="btn" id="clear-btn">清空</button>
   <div class="recent-wrap">
     <button class="btn btn-primary" id="export-btn">导出文件 ▾</button>
-    <div class="dropdown" id="export-dropdown" style="right:0;left:auto;">
+    <div class="dropdown right" id="export-dropdown">
       <div class="dd-list" id="export-list">
         <div class="dd-item" data-type="pdf"><div class="dd-icon">PDF</div><div class="dd-meta"><div class="dd-name">导出为 PDF</div><div class="dd-sub">系统打印对话框，可另存为</div></div></div>
         <div class="dd-item" data-type="html"><div class="dd-icon">HTML</div><div class="dd-meta"><div class="dd-name">导出为 HTML</div><div class="dd-sub">单文件，离线可打开</div></div></div>
